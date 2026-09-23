@@ -5,15 +5,19 @@ import { db } from '../services/db';
 import { Badge } from '../components/ui/Badge';
 import { Card, CardContent } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
+import { Slideout } from '../components/ui/Slideout';
 import { UpdateIncidentModal } from '../components/incidents/UpdateIncidentModal';
+import { EditStudentModal } from '../components/students/EditStudentModal';
 import { cn, isStudentAtRisk } from '../lib/utils';
 import { useAuthStore } from '../store/authStore';
 import { useState } from 'react';
+import { Edit } from 'lucide-react';
 
 export default function StudentProfilePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuthStore();
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const data = useLiveQuery(async () => {
     if (!id) return null;
@@ -52,14 +56,23 @@ export default function StudentProfilePage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Roster
         </Link>
-        <Link 
-          to={`/students/${id}/print`} 
-          className="inline-flex items-center text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors"
-          target="_blank"
-        >
-          <Printer className="mr-2 h-4 w-4" />
-          Export Report
-        </Link>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setIsEditModalOpen(true)}
+            className="inline-flex items-center text-sm font-medium bg-secondary text-secondary-foreground px-3 py-1.5 rounded-md hover:bg-secondary/80 transition-colors"
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Profile
+          </button>
+          <Link 
+            to={`/students/${id}/print`} 
+            className="inline-flex items-center text-sm font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors"
+            target="_blank"
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Export Report
+          </Link>
+        </div>
       </div>
 
       {/* Hero Section */}
@@ -78,13 +91,15 @@ export default function StudentProfilePage() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-2 text-sm">
               <div><span className="font-medium text-muted-foreground">Grade/Section:</span> {student.gradeLevel} - {student.section}</div>
-              {student.dateOfBirth && <div><span className="font-medium text-muted-foreground">DOB:</span> {student.dateOfBirth}</div>}
+              {student.dateOfBirth && <div><span className="font-medium text-muted-foreground">DOB:</span> {new Date(student.dateOfBirth).toLocaleDateString()}</div>}
               {student.gender && <div><span className="font-medium text-muted-foreground">Gender:</span> {student.gender}</div>}
             </div>
             
             {(student.emergencyContactName || student.emergencyContactNumber) && (
               <div className="mt-2 text-sm bg-background/50 p-2 rounded-md border text-left">
-                <span className="font-medium text-muted-foreground block mb-1">Emergency Contact:</span>
+                <span className="font-medium text-muted-foreground block mb-1 flex justify-between">
+                  <span>Emergency Contact</span>
+                </span>
                 <div className="font-semibold">{student.emergencyContactName} {student.emergencyContactRelation ? `(${student.emergencyContactRelation})` : ''}</div>
                 <div>{student.emergencyContactNumber}</div>
               </div>
@@ -203,6 +218,19 @@ export default function StudentProfilePage() {
           />
         )}
       </Modal>
+
+      <Slideout
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Student Profile"
+        description="Update basic information, add extended details, and manage program enrollments."
+      >
+        <EditStudentModal 
+          student={student}
+          onSuccess={() => setIsEditModalOpen(false)}
+          onCancel={() => setIsEditModalOpen(false)}
+        />
+      </Slideout>
     </div>
   );
 }
