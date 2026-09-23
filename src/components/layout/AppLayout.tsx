@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, AlertTriangle, Wifi, WifiOff, CloudSync, UserCircle2, Moon, Sun, Monitor } from 'lucide-react';
+import { LayoutDashboard, Users, AlertTriangle, Wifi, WifiOff, CloudSync, UserCircle2, Moon, Sun } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Logo } from '../ui/Logo';
 import { useAuthStore, type Role } from '../../store/authStore';
