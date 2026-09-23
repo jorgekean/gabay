@@ -17,6 +17,7 @@ export default function IncidentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterType, setFilterType] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
   const activeSchoolYear = useSettingsStore(state => state.activeSchoolYear);
 
   // Fetch incidents joined with student data
@@ -40,11 +41,13 @@ export default function IncidentsPage() {
 
   const uniqueTypes = Array.from(new Set(rawIncidentsWithStudents?.map(i => i.type) || [])).sort();
   const uniqueCategories = Array.from(new Set(rawIncidentsWithStudents?.map(i => i.category) || [])).sort();
+  const uniqueStatuses = Array.from(new Set(rawIncidentsWithStudents?.map(i => i.status) || [])).sort();
 
   const filteredIncidents = rawIncidentsWithStudents?.filter(inc => {
     const matchesType = filterType === 'All' ? true : inc.type === filterType;
     const matchesCategory = filterCategory === 'All' ? true : inc.category === filterCategory;
-    return matchesType && matchesCategory;
+    const matchesStatus = filterStatus === 'All' ? true : inc.status === filterStatus;
+    return matchesType && matchesCategory && matchesStatus;
   });
 
   const handleExport = () => {
@@ -168,7 +171,7 @@ export default function IncidentsPage() {
         
         <div className="flex w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
           <Link 
-            to={`/incidents/print?type=${encodeURIComponent(filterType)}&category=${encodeURIComponent(filterCategory)}`}
+            to={`/incidents/print?type=${encodeURIComponent(filterType)}&category=${encodeURIComponent(filterCategory)}&status=${encodeURIComponent(filterStatus)}`}
             target="_blank"
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 rounded-md transition-colors text-sm font-medium"
           >
@@ -188,23 +191,34 @@ export default function IncidentsPage() {
 
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center p-4 bg-card border rounded-2xl shadow-sm">
         <span className="text-sm text-muted-foreground font-medium hidden md:block shrink-0">Filters:</span>
-        <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
-          <select 
-            className="h-10 md:h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <option value="All">All Types</option>
-            {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+        <div className="grid grid-cols-1 md:flex gap-3 w-full md:w-auto">
+          <div className="grid grid-cols-2 md:flex gap-3 w-full md:w-auto">
+            <select 
+              className="h-10 md:h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+            >
+              <option value="All">All Types</option>
+              {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
 
+            <select 
+              className="h-10 md:h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+            >
+              <option value="All">All Categories</option>
+              {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          
           <select 
-            className="h-10 md:h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            className="h-10 md:h-9 w-full md:w-auto rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
           >
-            <option value="All">All Categories</option>
-            {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            <option value="All">All Statuses</option>
+            {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
       </div>

@@ -8,6 +8,7 @@ export default function IncidentsPrintPage() {
   const [searchParams] = useSearchParams();
   const filterType = searchParams.get('type') || 'All';
   const filterCategory = searchParams.get('category') || 'All';
+  const filterStatus = searchParams.get('status') || 'All';
   const activeSchoolYear = useSettingsStore(state => state.activeSchoolYear);
 
   const data = useLiveQuery(async () => {
@@ -40,11 +41,12 @@ export default function IncidentsPrintPage() {
     mapped = mapped.filter(inc => {
       const matchesType = filterType === 'All' ? true : inc.type === filterType;
       const matchesCategory = filterCategory === 'All' ? true : inc.category === filterCategory;
-      return matchesType && matchesCategory;
+      const matchesStatus = filterStatus === 'All' ? true : inc.status === filterStatus;
+      return matchesType && matchesCategory && matchesStatus;
     });
 
     return mapped;
-  }, [filterType, filterCategory, activeSchoolYear]);
+  }, [filterType, filterCategory, filterStatus, activeSchoolYear]);
 
   useEffect(() => {
     if (data) {
