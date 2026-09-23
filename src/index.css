@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-card: var(--color-card);
+  --color-card-foreground: var(--color-card-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-border: var(--color-border);
+}
+
+@layer base {
+  :root {
+    --color-primary: #ea580c; /* Orange */
+    --color-primary-foreground: #ffffff;
+    --color-background: #f2f2f7; /* iOS grouped background */
+    --color-foreground: #000000;
+    --color-card: #ffffff;
+    --color-card-foreground: #000000;
+    --color-muted: #e5e5ea; /* iOS separator/muted */
+    --color-muted-foreground: #8e8e93; /* iOS secondary text */
+    --color-border: #c6c6c8;
+  }
+  .dark {
+    --color-primary: #ea580c; /* Orange */
+    --color-primary-foreground: #ffffff;
+    --color-background: #000000; /* iOS true black */
+    --color-foreground: #ffffff;
+    --color-card: #1c1c1e; /* iOS elevated */
+    --color-card-foreground: #ffffff;
+    --color-muted: #2c2c2e;
+    --color-muted-foreground: #98989d;
+    --color-border: #38383a;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    @apply bg-background text-foreground antialiased;
+  }
+}
