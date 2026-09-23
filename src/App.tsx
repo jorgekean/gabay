@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import { seedDatabase } from './services/db';
 import { useThemeStore } from './store/themeStore';
@@ -22,7 +22,7 @@ function App() {
   return (
     <>
       <Toaster position="top-center" />
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
@@ -32,7 +32,7 @@ function App() {
           </Route>
           <Route path="/students/:id/print" element={<StudentPrintPage />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </>
   );
 }
