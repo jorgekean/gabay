@@ -9,6 +9,7 @@ import StudentsPage from './pages/StudentsPage';
 import StudentProfilePage from './pages/StudentProfilePage';
 import StudentPrintPage from './pages/StudentPrintPage';
 import IncidentsPage from './pages/IncidentsPage';
+import IncidentsPrintPage from './pages/IncidentsPrintPage';
 import { Toaster } from 'sonner';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
             <Route path="incidents" element={<IncidentsPage />} />
           </Route>
           <Route path="/students/:id/print" element={<StudentPrintPage />} />
+          <Route path="/incidents/print" element={<IncidentsPrintPage />} />
         </Routes>
       </HashRouter>
     </>

@@ -31,6 +31,7 @@ export interface Incident {
   reporter?: string;
   status: 'Open' | 'Under Investigation' | 'Parent Conference Scheduled' | 'Resolved' | 'Closed';
   syncStatus: 'Synced' | 'Pending';
+  counselingNotes?: string;
 }
 
 export const db = new Dexie('StudentHRIS') as Dexie & {
@@ -91,6 +92,11 @@ db.version(5).stores({
       inc.schoolYear = '2026-2027';
     }
   });
+});
+
+db.version(6).stores({
+  students: 'id, lrn, lastName, gradeLevel, is4Ps, isIP, schoolYear', 
+  incidents: 'id, studentLrn, type, status, syncStatus, reporter, schoolYear' // counselingNotes is not indexed, so no change in string
 });
 
 export const seedDatabase = async () => {

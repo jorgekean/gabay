@@ -50,7 +50,7 @@ export default function StudentsPage() {
     let matchesAtRisk = true;
     if (filterAtRisk) {
       const studentIncidents = allIncidents?.filter(i => i.studentLrn === student.lrn) || [];
-      matchesAtRisk = isStudentAtRisk(studentIncidents);
+      matchesAtRisk = isStudentAtRisk(student, studentIncidents);
     }
 
     return matchesSearch && matches4Ps && matchesSPED && matchesGrade && matchesSection && matchesAtRisk;
@@ -129,7 +129,7 @@ export default function StudentsPage() {
       header: 'Tags',
       cell: (student) => {
         const studentIncidents = allIncidents?.filter(i => i.studentLrn === student.lrn) || [];
-        const isAtRisk = isStudentAtRisk(studentIncidents);
+        const isAtRisk = isStudentAtRisk(student, studentIncidents);
         
         return (
           <div className="flex flex-wrap gap-1">
@@ -145,7 +145,7 @@ export default function StudentsPage() {
 
   const renderMobileCard = (student: Student) => {
     const studentIncidents = allIncidents?.filter(i => i.studentLrn === student.lrn) || [];
-    const isAtRisk = isStudentAtRisk(studentIncidents);
+    const isAtRisk = isStudentAtRisk(student, studentIncidents);
 
     return (
       <Card className="shadow-sm">

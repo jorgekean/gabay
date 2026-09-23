@@ -37,21 +37,30 @@ export default function DashboardPage() {
     // KPI 3: At-Risk Students (based on active SY incidents)
     const atRiskStudents = activeStudents.filter(student => {
       const studentIncidents = activeIncidents.filter(i => i.studentLrn === student.lrn);
-      return isStudentAtRisk(studentIncidents);
+      return isStudentAtRisk(student, studentIncidents);
     });
 
-    // Chart Data: Incidents by Category (This Month, filtered by SY)
-    const categoryCounts: Record<string, number> = {};
+    // Chart Data: Incidents by Grade Level (This Month, filtered by SY)
+    const gradeCounts: Record<string, number> = {};
     activeIncidents.forEach(inc => {
       const date = new Date(inc.incidentDate);
       if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-        categoryCounts[inc.category] = (categoryCounts[inc.category] || 0) + 1;
+        const student = activeStudents.find(s => s.lrn === inc.studentLrn);
+        if (student) {
+          gradeCounts[student.gradeLevel] = (gradeCounts[student.gradeLevel] || 0) + 1;
+        }
       }
     });
-    const chartData = Object.keys(categoryCounts).map(key => ({
+    
+    const chartData = Object.keys(gradeCounts).map(key => ({
       name: key,
-      count: categoryCounts[key]
-    })).sort((a, b) => b.count - a.count).slice(0, 5); // top 5 categories
+      count: gradeCounts[key]
+    })).sort((a, b) => {
+      // Sort logically by grade (e.g., Grade 7, Grade 8)
+      const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
 
     // Recent Incidents (Last 5, filtered by SY)
     const recentIncidents = activeIncidents
@@ -119,7 +128,7 @@ export default function DashboardPage() {
         {/* Chart View */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Top Incident Categories (This Month)</CardTitle>
+            <CardTitle className="text-lg">Incidents by Grade Level (This Month)</CardTitle>
           </CardHeader>
           <CardContent>
             {data.chartData.length > 0 ? (

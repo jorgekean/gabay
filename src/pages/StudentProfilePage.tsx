@@ -4,10 +4,16 @@ import { ArrowLeft, UserCircle2, Printer } from 'lucide-react';
 import { db } from '../services/db';
 import { Badge } from '../components/ui/Badge';
 import { Card, CardContent } from '../components/ui/Card';
+import { Modal } from '../components/ui/Modal';
+import { UpdateIncidentModal } from '../components/incidents/UpdateIncidentModal';
 import { cn, isStudentAtRisk } from '../lib/utils';
+import { useAuthStore } from '../store/authStore';
+import { useState } from 'react';
 
 export default function StudentProfilePage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuthStore();
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
 
   const data = useLiveQuery(async () => {
     if (!id) return null;
@@ -24,7 +30,7 @@ export default function StudentProfilePage() {
   if (data === null) return <div className="p-4 text-destructive font-semibold">Student not found.</div>;
 
   const { student, incidents } = data;
-  const isAtRisk = isStudentAtRisk(incidents);
+  const isAtRisk = isStudentAtRisk(student, incidents);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -35,6 +41,8 @@ export default function StudentProfilePage() {
       default: return 'bg-gray-300';
     }
   };
+
+  const hasVaultAccess = user?.role === 'Guidance' || user?.role === 'Admin';
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full">
@@ -149,6 +157,30 @@ export default function StudentProfilePage() {
                         Status: <strong className="text-foreground">{inc.status}</strong> • Sync: {inc.syncStatus}
                       </span>
                     </div>
+                    
+                    {/* Digital Vault Section */}
+                    {hasVaultAccess && (
+                      <div className="mt-2 pt-3 border-t border-dashed">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                            DIGITAL VAULT
+                          </span>
+                          <button 
+                            onClick={() => setSelectedIncidentId(inc.id)}
+                            className="text-xs text-primary hover:underline font-medium"
+                          >
+                            Update Case / Notes
+                          </button>
+                        </div>
+                        {inc.counselingNotes ? (
+                          <div className="bg-amber-50/50 border border-amber-100 p-2 rounded text-sm italic text-amber-900 whitespace-pre-wrap">
+                            {inc.counselingNotes}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">No counseling notes recorded yet.</p>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -156,6 +188,21 @@ export default function StudentProfilePage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={!!selectedIncidentId}
+        onClose={() => setSelectedIncidentId(null)}
+        title="Update Case & Digital Vault"
+        description="Update the status of this incident and securely log your counseling or intervention notes."
+      >
+        {selectedIncidentId && (
+          <UpdateIncidentModal 
+            incidentId={selectedIncidentId}
+            onSuccess={() => setSelectedIncidentId(null)}
+            onCancel={() => setSelectedIncidentId(null)}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
