@@ -111,4 +111,55 @@ db.version(7).stores({
   });
 });
 
+import { encryptData, decryptData } from '../lib/encryption';
 
+db.incidents.hook('creating', function (primKey, obj, transaction) {
+  if (obj.counselingNotes) {
+    obj.counselingNotes = encryptData(obj.counselingNotes);
+  }
+});
+
+db.incidents.hook('updating', function (mods, primKey, obj, transaction) {
+  if (mods.hasOwnProperty('counselingNotes') && mods.counselingNotes !== undefined) {
+    return { counselingNotes: encryptData(mods.counselingNotes as string) };
+  }
+});
+
+db.incidents.hook('reading', function (obj) {
+  if (obj.counselingNotes) {
+    obj.counselingNotes = decryptData(obj.counselingNotes);
+  }
+  return obj;
+});
+
+// --- Student Encryption Hooks ---
+const encryptStudent = (student: any) => {
+  if (student.firstName) student.firstName = encryptData(student.firstName);
+  if (student.lastName) student.lastName = encryptData(student.lastName);
+  if (student.emergencyContactName) student.emergencyContactName = encryptData(student.emergencyContactName);
+  if (student.emergencyContactRelation) student.emergencyContactRelation = encryptData(student.emergencyContactRelation);
+  if (student.emergencyContactNumber) student.emergencyContactNumber = encryptData(student.emergencyContactNumber);
+};
+
+db.students.hook('creating', function (primKey, obj, transaction) {
+  encryptStudent(obj);
+});
+
+db.students.hook('updating', function (mods, primKey, obj, transaction) {
+  const newMods: any = { ...mods };
+  if (newMods.hasOwnProperty('firstName') && newMods.firstName !== undefined) newMods.firstName = encryptData(newMods.firstName as string);
+  if (newMods.hasOwnProperty('lastName') && newMods.lastName !== undefined) newMods.lastName = encryptData(newMods.lastName as string);
+  if (newMods.hasOwnProperty('emergencyContactName') && newMods.emergencyContactName !== undefined) newMods.emergencyContactName = encryptData(newMods.emergencyContactName as string);
+  if (newMods.hasOwnProperty('emergencyContactRelation') && newMods.emergencyContactRelation !== undefined) newMods.emergencyContactRelation = encryptData(newMods.emergencyContactRelation as string);
+  if (newMods.hasOwnProperty('emergencyContactNumber') && newMods.emergencyContactNumber !== undefined) newMods.emergencyContactNumber = encryptData(newMods.emergencyContactNumber as string);
+  return newMods;
+});
+
+db.students.hook('reading', function (obj) {
+  if (obj.firstName) obj.firstName = decryptData(obj.firstName) as string;
+  if (obj.lastName) obj.lastName = decryptData(obj.lastName) as string;
+  if (obj.emergencyContactName) obj.emergencyContactName = decryptData(obj.emergencyContactName) as string;
+  if (obj.emergencyContactRelation) obj.emergencyContactRelation = decryptData(obj.emergencyContactRelation) as string;
+  if (obj.emergencyContactNumber) obj.emergencyContactNumber = decryptData(obj.emergencyContactNumber) as string;
+  return obj;
+});

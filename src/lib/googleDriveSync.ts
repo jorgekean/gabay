@@ -3,9 +3,25 @@ import { db } from '../services/db';
 const FILENAME = 'gabay_backup.json';
 const MIME_TYPE = 'application/json';
 
+import { encryptData } from './encryption';
+
 export async function exportDataToJson(): Promise<string> {
-  const students = await db.students.toArray();
-  const incidents = await db.incidents.toArray();
+  const plainStudents = await db.students.toArray();
+  const plainIncidents = await db.incidents.toArray();
+
+  const students = plainStudents.map(s => ({
+    ...s,
+    firstName: encryptData(s.firstName) as string,
+    lastName: encryptData(s.lastName) as string,
+    emergencyContactName: encryptData(s.emergencyContactName),
+    emergencyContactRelation: encryptData(s.emergencyContactRelation),
+    emergencyContactNumber: encryptData(s.emergencyContactNumber)
+  }));
+
+  const incidents = plainIncidents.map(i => ({
+    ...i,
+    counselingNotes: encryptData(i.counselingNotes)
+  }));
 
   const exportData = {
     version: 1,
