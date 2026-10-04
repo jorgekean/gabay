@@ -16,7 +16,7 @@ export default function AppLayout() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [driveToken, setDriveToken] = useState<string | null>(localStorage.getItem('gabay_drive_token'));
-  
+
   const { user, login } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
 
@@ -30,12 +30,12 @@ export default function AppLayout() {
       const success = await syncToGoogleDrive(token);
       if (success) {
         // Mark incidents and students as synced locally
-        const incToUpdate = pendingIncidents.map(i => ({...i, syncStatus: 'Synced' as const}));
+        const incToUpdate = pendingIncidents.map(i => ({ ...i, syncStatus: 'Synced' as const }));
         await db.incidents.bulkPut(incToUpdate);
-        
-        const stuToUpdate = pendingStudents.map(s => ({...s, syncStatus: 'Synced' as const}));
+
+        const stuToUpdate = pendingStudents.map(s => ({ ...s, syncStatus: 'Synced' as const }));
         await db.students.bulkPut(stuToUpdate);
-        
+
         toast.success('Backup synced to Google Drive successfully!');
       } else {
         throw new Error('Sync failed');
@@ -73,9 +73,6 @@ export default function AppLayout() {
     }
   };
 
-  const handleSync = async () => {
-    // Legacy simulated sync, replaced by performSync
-  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -106,7 +103,7 @@ export default function AppLayout() {
             GABAY
           </span>
         </div>
-        
+
         <div className="flex-1 overflow-auto py-4 px-3 flex flex-col gap-6">
           <div>
             <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Menu</div>
@@ -118,8 +115,8 @@ export default function AppLayout() {
                   className={({ isActive }) =>
                     cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all",
-                      isActive 
-                        ? "bg-primary text-primary-foreground shadow-sm" 
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-foreground/70 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground"
                     )
                   }
@@ -136,7 +133,7 @@ export default function AppLayout() {
         <div className="p-4 border-t border-border/50 flex flex-col gap-3 bg-background/40">
           <div className="flex flex-col gap-2">
             <div className="text-xs font-medium text-muted-foreground px-1">School Year</div>
-            <select 
+            <select
               className="text-sm bg-black/5 dark:bg-white/10 border-none rounded-lg focus:ring-2 focus:ring-primary py-1.5 px-2 cursor-pointer font-medium outline-none"
               value={useSettingsStore((state) => state.activeSchoolYear)}
               onChange={(e) => useSettingsStore.getState().setActiveSchoolYear(e.target.value)}
@@ -151,7 +148,7 @@ export default function AppLayout() {
             <div className="text-xs font-medium text-muted-foreground px-1">Active Role</div>
             <div className="flex items-center gap-2 bg-black/5 dark:bg-white/10 p-1.5 rounded-lg">
               <UserCircle2 className="h-4 w-4 text-foreground/70 ml-1" />
-              <select 
+              <select
                 className="text-sm bg-transparent border-none focus:ring-0 cursor-pointer font-medium w-full outline-none"
                 value={user?.role || 'Guidance'}
                 onChange={(e) => {
@@ -176,22 +173,22 @@ export default function AppLayout() {
             GABAY
           </div>
           <div className="flex flex-1 items-center justify-end gap-4 md:ml-auto">
-            
+
             <div className="flex items-center gap-4 text-sm font-medium">
-              <button 
+              <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Toggle theme"
               >
                 {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
-              <button 
+              <button
                 onClick={handleSyncClick}
                 disabled={pendingCount === 0 || isSyncing}
                 className={cn(
                   "flex items-center gap-1.5 transition-colors p-1.5 rounded-lg",
-                  pendingCount > 0 
-                    ? "text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 cursor-pointer" 
+                  pendingCount > 0
+                    ? "text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 cursor-pointer"
                     : "text-muted-foreground opacity-50 cursor-not-allowed"
                 )}
               >
