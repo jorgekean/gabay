@@ -113,15 +113,16 @@ db.version(7).stores({
 
 import { encryptData, decryptData } from '../lib/encryption';
 
-db.incidents.hook('creating', function (primKey, obj, transaction) {
+db.incidents.hook('creating', function (_primKey, obj, _transaction) {
   if (obj.counselingNotes) {
     obj.counselingNotes = encryptData(obj.counselingNotes);
   }
 });
 
-db.incidents.hook('updating', function (mods, primKey, obj, transaction) {
-  if (mods.hasOwnProperty('counselingNotes') && mods.counselingNotes !== undefined) {
-    return { counselingNotes: encryptData(mods.counselingNotes as string) };
+db.incidents.hook('updating', function (mods, _primKey, _obj, _transaction) {
+  const modsAny = mods as any;
+  if (modsAny.hasOwnProperty('counselingNotes') && modsAny.counselingNotes !== undefined) {
+    return { counselingNotes: encryptData(modsAny.counselingNotes as string) };
   }
 });
 
@@ -141,17 +142,18 @@ const encryptStudent = (student: any) => {
   if (student.emergencyContactNumber) student.emergencyContactNumber = encryptData(student.emergencyContactNumber);
 };
 
-db.students.hook('creating', function (primKey, obj, transaction) {
+db.students.hook('creating', function (_primKey, obj, _transaction) {
   encryptStudent(obj);
 });
 
-db.students.hook('updating', function (mods, primKey, obj, transaction) {
+db.students.hook('updating', function (mods, _primKey, _obj, _transaction) {
   const newMods: any = { ...mods };
-  if (newMods.hasOwnProperty('firstName') && newMods.firstName !== undefined) newMods.firstName = encryptData(newMods.firstName as string);
-  if (newMods.hasOwnProperty('lastName') && newMods.lastName !== undefined) newMods.lastName = encryptData(newMods.lastName as string);
-  if (newMods.hasOwnProperty('emergencyContactName') && newMods.emergencyContactName !== undefined) newMods.emergencyContactName = encryptData(newMods.emergencyContactName as string);
-  if (newMods.hasOwnProperty('emergencyContactRelation') && newMods.emergencyContactRelation !== undefined) newMods.emergencyContactRelation = encryptData(newMods.emergencyContactRelation as string);
-  if (newMods.hasOwnProperty('emergencyContactNumber') && newMods.emergencyContactNumber !== undefined) newMods.emergencyContactNumber = encryptData(newMods.emergencyContactNumber as string);
+  const modsAny = mods as any;
+  if (modsAny.hasOwnProperty('firstName') && modsAny.firstName !== undefined) newMods.firstName = encryptData(modsAny.firstName as string);
+  if (modsAny.hasOwnProperty('lastName') && modsAny.lastName !== undefined) newMods.lastName = encryptData(modsAny.lastName as string);
+  if (modsAny.hasOwnProperty('emergencyContactName') && modsAny.emergencyContactName !== undefined) newMods.emergencyContactName = encryptData(modsAny.emergencyContactName as string);
+  if (modsAny.hasOwnProperty('emergencyContactRelation') && modsAny.emergencyContactRelation !== undefined) newMods.emergencyContactRelation = encryptData(modsAny.emergencyContactRelation as string);
+  if (modsAny.hasOwnProperty('emergencyContactNumber') && modsAny.emergencyContactNumber !== undefined) newMods.emergencyContactNumber = encryptData(modsAny.emergencyContactNumber as string);
   return newMods;
 });
 
