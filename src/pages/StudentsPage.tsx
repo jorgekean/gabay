@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
 import { Search, Upload } from 'lucide-react';
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { db, type Student } from '../services/db';
 import { DataTable, type ColumnDef } from '../components/ui/DataTable';
@@ -11,8 +11,25 @@ import { Badge } from '../components/ui/Badge';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Switch } from '../components/ui/Switch';
+import { Modal } from '../components/ui/Modal';
 import { isStudentAtRisk } from '../lib/utils';
 import { useSettingsStore } from '../store/settingsStore';
+
+const TARGET_FIELDS = [
+  { key: 'lrn', label: 'LRN', aliases: ['lrn', 'studentid', 'studentno', 'idnumber'] },
+  { key: 'firstName', label: 'First Name', aliases: ['firstname', 'fname', 'givenname', 'first'] },
+  { key: 'lastName', label: 'Last Name', aliases: ['lastname', 'lname', 'surname', 'last'] },
+  { key: 'gradeLevel', label: 'Grade Level', aliases: ['grade', 'gradelevel', 'yearlevel', 'level'] },
+  { key: 'section', label: 'Section', aliases: ['section', 'class'] },
+  { key: 'is4Ps', label: '4Ps Beneficiary', aliases: ['4ps', 'is4ps', 'beneficiary'] },
+  { key: 'isSPED', label: 'SPED', aliases: ['sped', 'issped', 'specialeducation'] },
+  { key: 'isIP', label: 'IP (Indigenous Person)', aliases: ['ip', 'isip', 'indigenous'] },
+  { key: 'dateOfBirth', label: 'Date of Birth', aliases: ['dob', 'dateofbirth', 'birthdate', 'bday'] },
+  { key: 'gender', label: 'Gender', aliases: ['gender', 'sex'] },
+  { key: 'emergencyContactName', label: 'Emergency Contact Name', aliases: ['emergencycontactname', 'emergencycontact', 'contactname', 'guardian', 'parent'] },
+  { key: 'emergencyContactRelation', label: 'Emergency Contact Relation', aliases: ['emergencycontactrelation', 'relation', 'relationship'] },
+  { key: 'emergencyContactNumber', label: 'Emergency Contact Number', aliases: ['emergencycontactnumber', 'contactnumber', 'contactno', 'phonenumber', 'phone'] },
+];
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +39,12 @@ export default function StudentsPage() {
   const [filterGrade, setFilterGrade] = useState('All');
   const [filterSection, setFilterSection] = useState('All');
   
+  // Import modal state
+  const [showMappingModal, setShowMappingModal] = useState(false);
+  const [extractedData, setExtractedData] = useState<any[]>([]);
+  const [extractedHeaders, setExtractedHeaders] = useState<string[]>([]);
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all students reactively
@@ -60,51 +83,117 @@ export default function StudentsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        try {
-          const importedStudents = results.data.map((row: any) => ({
-            id: crypto.randomUUID() as string, // Default new ID, might be overridden below
-            lrn: row.LRN || '',
-            firstName: row.FirstName || '',
-            lastName: row.LastName || '',
-            gradeLevel: row.GradeLevel || '',
-            section: row.Section || '',
-            is4Ps: row.is4Ps?.toLowerCase() === 'yes' || String(row.is4Ps) === 'true',
-            isSPED: row.isSPED?.toLowerCase() === 'yes' || String(row.isSPED) === 'true',
-            isIP: row.isIP?.toLowerCase() === 'yes' || String(row.isIP) === 'true',
-            dateOfBirth: row.DateOfBirth || '',
-            gender: row.Gender || '',
-            emergencyContactName: row.EmergencyContactName || '',
-            emergencyContactRelation: row.EmergencyContactRelation || '',
-            emergencyContactNumber: row.EmergencyContactNumber || '',
-            schoolYear: activeSchoolYear,
-          }));
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        // Defval '' ensures empty cells are included as empty strings
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' }); 
 
-          // Fetch existing students for this school year to prevent duplicates
-          const existingStudents = await db.students.where('schoolYear').equals(activeSchoolYear!).toArray();
-          const existingLrnMap = new Map(existingStudents.map(s => [s.lrn, s.id]));
-
-          const studentsToUpsert = importedStudents.map(student => {
-            const existingId = existingLrnMap.get(student.lrn);
-            if (existingId) {
-              student.id = existingId; // Use existing ID to trigger an update instead of insert
-            }
-            return student;
-          });
-
-          await db.students.bulkPut(studentsToUpsert);
-          toast.success(`Successfully imported/updated ${studentsToUpsert.length} students`);
-        } catch (error) {
-          console.error(error);
-          toast.error('Failed to import students. Check console for details.');
+        if (json.length === 0) {
+           toast.error('The uploaded file is empty.');
+           return;
         }
-        
-        if (fileInputRef.current) fileInputRef.current.value = '';
+
+        const headers = Object.keys(json[0]);
+        setExtractedHeaders(headers);
+        setExtractedData(json);
+
+        const initialMapping: Record<string, string> = {};
+        const normalize = (str: string) => String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        for (const field of TARGET_FIELDS) {
+           let matchedHeader = '';
+           for (const header of headers) {
+              const normHeader = normalize(header);
+              if (field.aliases.includes(normHeader) || normHeader.includes(normalize(field.key))) {
+                 matchedHeader = header;
+                 break;
+              }
+           }
+           if (matchedHeader) {
+              initialMapping[field.key] = matchedHeader;
+           }
+        }
+
+        setColumnMapping(initialMapping);
+        setShowMappingModal(true);
+
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to parse file. Ensure it is a valid Excel or CSV file.');
       }
-    });
+      
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleConfirmImport = async () => {
+    try {
+        if (!columnMapping['lrn'] || !columnMapping['firstName'] || !columnMapping['lastName']) {
+            toast.error('LRN, First Name, and Last Name must be mapped.');
+            return;
+        }
+
+        const importedStudents = extractedData.map((row: any) => {
+            const getValue = (key: string) => {
+                const header = columnMapping[key];
+                return header && row[header] !== undefined ? row[header] : '';
+            };
+            
+            const getBoolean = (key: string) => {
+                const val = String(getValue(key)).toLowerCase().trim();
+                return val === 'yes' || val === 'true' || val === '1' || val === 'y';
+            }
+
+            return {
+                id: crypto.randomUUID() as string,
+                lrn: String(getValue('lrn')).trim(),
+                firstName: String(getValue('firstName')).trim(),
+                lastName: String(getValue('lastName')).trim(),
+                gradeLevel: String(getValue('gradeLevel')).trim(),
+                section: String(getValue('section')).trim(),
+                is4Ps: getBoolean('is4Ps'),
+                isSPED: getBoolean('isSPED'),
+                isIP: getBoolean('isIP'),
+                dateOfBirth: String(getValue('dateOfBirth')).trim(),
+                gender: String(getValue('gender')).trim(),
+                emergencyContactName: String(getValue('emergencyContactName')).trim(),
+                emergencyContactRelation: String(getValue('emergencyContactRelation')).trim(),
+                emergencyContactNumber: String(getValue('emergencyContactNumber')).trim(),
+                schoolYear: activeSchoolYear,
+                syncStatus: 'Pending' as const,
+            }
+        }).filter((s: any) => s.lrn && s.firstName && s.lastName);
+
+        if (importedStudents.length === 0) {
+            toast.error('No valid students found with the current mapping.');
+            return;
+        }
+
+        const existingStudents = await db.students.where('schoolYear').equals(activeSchoolYear!).toArray();
+        const existingLrnMap = new Map(existingStudents.map(s => [s.lrn, s.id]));
+
+        const studentsToUpsert = importedStudents.map((student: any) => {
+          const existingId = existingLrnMap.get(student.lrn);
+          if (existingId) {
+            student.id = existingId;
+          }
+          return student;
+        });
+
+        await db.students.bulkPut(studentsToUpsert);
+        toast.success(`Successfully imported/updated ${studentsToUpsert.length} students`);
+        setShowMappingModal(false);
+    } catch (error) {
+        console.error(error);
+        toast.error('Failed to import students. Check console for details.');
+    }
   };
 
   const columns: ColumnDef<Student>[] = [
@@ -182,14 +271,14 @@ export default function StudentsPage() {
         <div>
           <input 
             type="file" 
-            accept=".csv" 
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
             ref={fileInputRef} 
             onChange={handleFileUpload} 
             className="hidden" 
           />
           <Button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
-            Import CSV
+            Import CSV/Excel
           </Button>
         </div>
       </div>
@@ -267,13 +356,48 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Data Table */}
       <DataTable 
         data={students || []} 
         columns={columns} 
         keyExtractor={(s) => s.id}
         renderMobileCard={renderMobileCard}
       />
+
+      {/* Column Mapping Modal */}
+      <Modal
+        isOpen={showMappingModal}
+        onClose={() => setShowMappingModal(false)}
+        title="Map Excel Columns"
+        description={`We found ${extractedData.length} rows. Please match your file's columns to the required fields.`}
+      >
+        <div className="space-y-4 py-2">
+            <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-3">
+                {TARGET_FIELDS.map(field => (
+                    <div key={field.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2 last:border-0">
+                        <div className="font-medium text-sm">
+                            {field.label}
+                            {['lrn', 'firstName', 'lastName'].includes(field.key) && <span className="text-red-500 ml-1">*</span>}
+                        </div>
+                        <select
+                            className="h-9 w-full sm:w-1/2 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={columnMapping[field.key] || ''}
+                            onChange={(e) => setColumnMapping({...columnMapping, [field.key]: e.target.value})}
+                        >
+                            <option value="">-- Ignore / Not in file --</option>
+                            {extractedHeaders.map(h => (
+                                <option key={h} value={h}>{h}</option>
+                            ))}
+                        </select>
+                    </div>
+                ))}
+            </div>
+            
+            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                <Button variant="outline" onClick={() => setShowMappingModal(false)}>Cancel</Button>
+                <Button onClick={handleConfirmImport}>Confirm Import</Button>
+            </div>
+        </div>
+      </Modal>
     </div>
   );
 }

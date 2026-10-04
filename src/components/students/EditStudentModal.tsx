@@ -44,7 +44,8 @@ export function EditStudentModal({ student, onSuccess, onCancel }: EditStudentMo
     
     try {
       await db.students.update(student.id, {
-        ...formData
+        ...formData,
+        syncStatus: 'Pending'
       });
       onSuccess();
     } catch (error) {

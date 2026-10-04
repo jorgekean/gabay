@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
-import { seedDatabase } from './services/db';
 import { useThemeStore } from './store/themeStore';
 
 import DashboardPage from './pages/DashboardPage';
@@ -14,8 +13,6 @@ import { Toaster } from 'sonner';
 
 function App() {
   useEffect(() => {
-    // Seed database on app load
-    seedDatabase().catch(console.error);
     // Initialize theme
     useThemeStore.getState();
   }, []);

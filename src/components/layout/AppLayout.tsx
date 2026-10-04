@@ -6,11 +6,76 @@ import { Logo } from '../ui/Logo';
 import { useAuthStore, type Role } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../services/db';
+import { toast } from 'sonner';
+import { useGoogleLogin } from '@react-oauth/google';
+import { syncToGoogleDrive } from '../../lib/googleDriveSync';
 
 export default function AppLayout() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [driveToken, setDriveToken] = useState<string | null>(localStorage.getItem('gabay_drive_token'));
+  
   const { user, login } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
+
+  const pendingIncidents = useLiveQuery(() => db.incidents.where('syncStatus').equals('Pending').toArray(), []) || [];
+  const pendingStudents = useLiveQuery(() => db.students.where('syncStatus').equals('Pending').toArray(), []) || [];
+  const pendingCount = pendingIncidents.length + pendingStudents.length;
+
+  const performSync = async (token: string) => {
+    setIsSyncing(true);
+    try {
+      const success = await syncToGoogleDrive(token);
+      if (success) {
+        // Mark incidents and students as synced locally
+        const incToUpdate = pendingIncidents.map(i => ({...i, syncStatus: 'Synced' as const}));
+        await db.incidents.bulkPut(incToUpdate);
+        
+        const stuToUpdate = pendingStudents.map(s => ({...s, syncStatus: 'Synced' as const}));
+        await db.students.bulkPut(stuToUpdate);
+        
+        toast.success('Backup synced to Google Drive successfully!');
+      } else {
+        throw new Error('Sync failed');
+      }
+    } catch (e) {
+      toast.error('Failed to sync to Google Drive');
+      console.error(e);
+      // If token expired/invalid, let's clear it so they log in again
+      setDriveToken(null);
+      localStorage.removeItem('gabay_drive_token');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const loginToDrive = useGoogleLogin({
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    onSuccess: (tokenResponse) => {
+      setDriveToken(tokenResponse.access_token);
+      localStorage.setItem('gabay_drive_token', tokenResponse.access_token);
+      performSync(tokenResponse.access_token);
+    },
+    onError: (error) => {
+      console.error('Login Failed:', error);
+      toast.error('Failed to login to Google Drive');
+    }
+  });
+
+  const handleSyncClick = () => {
+    if (pendingCount === 0 || isSyncing) return;
+    if (driveToken) {
+      performSync(driveToken);
+    } else {
+      loginToDrive();
+    }
+  };
+
+  const handleSync = async () => {
+    // Legacy simulated sync, replaced by performSync
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -120,11 +185,22 @@ export default function AppLayout() {
               >
                 {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <CloudSync className="h-4 w-4" />
-                <span className="hidden md:inline">3 pending syncs</span>
-                <span className="md:hidden">3</span>
-              </div>
+              <button 
+                onClick={handleSyncClick}
+                disabled={pendingCount === 0 || isSyncing}
+                className={cn(
+                  "flex items-center gap-1.5 transition-colors p-1.5 rounded-lg",
+                  pendingCount > 0 
+                    ? "text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 cursor-pointer" 
+                    : "text-muted-foreground opacity-50 cursor-not-allowed"
+                )}
+              >
+                <CloudSync className={cn("h-4 w-4", isSyncing && "animate-pulse")} />
+                <span className="hidden md:inline">
+                  {isSyncing ? "Syncing..." : `${pendingCount} pending sync${pendingCount !== 1 ? 's' : ''}`}
+                </span>
+                <span className="md:hidden">{pendingCount}</span>
+              </button>
               <div
                 className={cn(
                   "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
